@@ -1,0 +1,203 @@
+﻿@page "/kitchen"
+@using BlazingPizza.Shared
+@using System.Text.Json
+@rendermode InteractiveServer
+@inject IRepository PizzaStore
+@inject IJSRuntime JSRuntime
+@inject OrderState OrderState
+@inject NavigationManager NavigationManager
+
+<PageTitle>Blazing Pizza - Kitchen</PageTitle>
+
+<div class="main">
+
+   <OrderFilter OnPreferenceChanged="OnPreferenceChanged" />
+
+	<div>
+		@if (OrdersWithStatus is null)
+		{
+			<p><em>Loading...</em></p>
+		}
+		else
+		{
+			<table class="table">
+				<thead>
+					<tr>
+						<th>IsDelivered</th>
+						<th>StatusText</th>
+						<th>Action</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var order in OrdersWithStatus)
+					{
+						<tr>
+							<td>@order.IsDelivered</td>
+							<td>@order.Order.Status</td>
+							<td>
+								<button type="button" class="btn btn-info" @onclick="() => LoadPizzaDetails(order.Order.Pizzas)" style="font-weight: bold">View Pizza details</button>
+								<button type="button" class="btn btn-warning" @onclick="@(() => UpdateOrderStatusAsync(order.Order.OrderId, PizzaOrderStatus.Preparing))" style="font-weight: bold">Mark as Preparing</button>
+								<button type="button" class="btn btn-success" @onclick="@(() => UpdateOrderStatusAsync(order.Order.OrderId, PizzaOrderStatus.OutForDelivery))" style="font-weight: bold">Out for Delivery</button>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	</div>
+</div>
+	
+	
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h4 class="modal-title fs-5" id="exampleModalLabel">Pizzas and Toppings</h4>
+				
+			</div>
+			<div class="modal-body">
+				@if (Pizzas is not null && Pizzas.Any())
+				{
+					<ul class="list-group">
+						@foreach (var pizza in Pizzas)
+						{
+							<li class="list-group-item">
+								<div><strong>@(pizza.Special?.Name ?? "Custom pizza")</strong> — £@pizza.GetFormattedTotalPrice()</div>
+								@if (pizza.Toppings?.Any() == true)
+								{
+									<div class="small text-muted">
+										Toppings:
+										@string.Join(", ", pizza.Toppings.Select(t => t.Topping?.Name ?? "(unknown)"))
+									</div>
+								}
+							</li>
+						}
+					</ul>
+				}
+				else
+				{
+					<p><em>No pizzas to display.</em></p>
+				}
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
+
+
+@code {
+
+	[Parameter]
+	public List<OrderWithStatus>? OrdersWithStatus { get; set; }
+
+	List<Pizza>? Pizzas;
+
+	private bool _initialLoadDone = false;
+
+	//Never call JS interop in OnInitialized or OnInitializedAsync. Use OnAfterRenderAsync with the firstRender flag for such logic. 
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender && !_initialLoadDone)
+		{
+			_initialLoadDone = true;
+
+			var vegetarianOrders = await GetVegetarianOrdersFromLocalStorage();
+
+			if (vegetarianOrders is null || !vegetarianOrders.Any())
+			{
+				OrdersWithStatus = await PizzaStore.GetOrdersAsync();
+			}
+			else
+			{
+				OrdersWithStatus = vegetarianOrders;
+			}
+
+			StateHasChanged(); 
+		}
+	}
+
+	async Task<List<OrderWithStatus>> GetVegetarianOrdersFromLocalStorage()
+	{
+		var vegetarianOrdersJson = await JSRuntime.InvokeAsync<string?>("blazorLocalStorage.get", "vegetarianPizza");
+		if (!string.IsNullOrEmpty(vegetarianOrdersJson))
+		{
+			OrdersWithStatus = JsonSerializer.Deserialize<List<OrderWithStatus>>(vegetarianOrdersJson);
+			return OrdersWithStatus ?? new List<OrderWithStatus>();
+		}
+		return new List<OrderWithStatus>();
+	}
+
+
+	public async Task LoadPizzaDetails(List<Pizza>? pizzas)
+	{
+		Pizzas = pizzas;
+		// ensure UI updated before showing modal
+		await InvokeAsync(StateHasChanged);
+		// show Bootstrap modal programmatically (Bootstrap 5)
+		await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getOrCreateInstance(document.getElementById('exampleModal')).show()");
+	}
+
+	// wired to <select>@onchange
+	async Task OnPreferenceChanged(ChangeEventArgs e)
+	{
+		var selected = e?.Value?.ToString();
+		await GetOrdersByPreferenceAsync(selected);
+	}
+
+
+	async Task GetOrdersByPreferenceAsync(string? preference)
+	{
+		if(OrdersWithStatus is null || string.IsNullOrEmpty(preference))
+		{
+			return;
+		}
+
+		if (string.Equals(preference, "Vegetarian", StringComparison.OrdinalIgnoreCase))
+		{
+			var vegetarianOrdersFromLocalStorage = await GetVegetarianOrdersFromLocalStorage();
+
+			if(vegetarianOrdersFromLocalStorage != null && vegetarianOrdersFromLocalStorage.Any())
+			{
+				OrdersWithStatus = vegetarianOrdersFromLocalStorage;
+			}
+			else
+			{
+				//key words to filter vegetarian pizzas
+				var terms = new[] { "Margherita", "Veggie", "Mushroom" };
+
+				var vegetarianOrders = OrdersWithStatus
+					.Where(o => o.Order?.Pizzas?.Any(p =>
+						!string.IsNullOrEmpty(p.Special?.Name) &&
+						terms.Any(t => p.Special!.Name.Contains(t, StringComparison.OrdinalIgnoreCase))
+					) == true)
+					.ToList();
+
+				// save filtered list
+				await JSRuntime.InvokeVoidAsync("blazorLocalStorage.set", "vegetarianPizza", JsonSerializer.Serialize<List<OrderWithStatus>>(vegetarianOrders));
+
+				OrdersWithStatus = vegetarianOrders;
+			}
+			
+		}
+		else
+		{
+			OrdersWithStatus = await PizzaStore.GetOrdersAsync();
+		}
+	}
+
+	private async Task UpdateOrderStatusAsync(int orderId, string status)
+	{
+		if (!string.IsNullOrEmpty(status))
+		{
+			await PizzaStore.UpdateOrderStatusAsync(new UpdateOrderStatusDto { OrderId = orderId, Status = status });
+		}
+		// 
+		StateHasChanged();
+	}
+
+}

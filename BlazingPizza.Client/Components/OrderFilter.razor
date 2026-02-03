@@ -1,0 +1,20 @@
+﻿<div class="form-group row">
+	<label for="staticEmail" class="col-sm-2 col-form-label">Filter Orders</label>
+	<div class="col-sm-6">
+		<select class="custom-select" id="inputGroupSelect04" @onchange="HandleChange">
+			<option value="">Select Preference</option>
+			<option value="Vegetarian">Vegetarian Pizzas</option>
+			<option value="NonVegetarian">Non Vegetarian</option>
+		</select>
+	</div>
+</div>
+
+@code {
+	[Parameter] public EventCallback<ChangeEventArgs> OnPreferenceChanged { get; set; }
+
+	// exposes EventCallback<ChangeEventArgs> and forwards the select change
+	private async Task HandleChange(ChangeEventArgs e)
+	{
+		await OnPreferenceChanged.InvokeAsync(e);
+	}
+}
