@@ -13,7 +13,7 @@ public class OrderWithStatus
     // Set from Order
     public string StatusText { get; set; } = null!;
 
-    public bool IsDelivered => StatusText == "Delivered";
+    public bool IsDelivered { get; set; }
 
     public List<Marker> MapMarkers { get; set; } = null!;
 
@@ -23,20 +23,23 @@ public class OrderWithStatus
         // To simulate a real backend process, we fake status updates based on the amount
         // of time since the order was placed
         string statusText;
+        bool isDelivered = false;
         List<Marker> mapMarkers;
         var dispatchTime = order.CreatedTime.Add(PreparationDuration);
 
-        if (order.Status == PizzaOrderStatus.Preparing)// (DateTime.Now < dispatchTime)
+        if (order.Status == PizzaOrderStatus.Preparing || order.Status == PizzaOrderStatus.OrderReceived)
         {
+            isDelivered = false;
             statusText = order.Status!;
             mapMarkers = new List<Marker>
                                 {
                                         ToMapMarker("You", order.DeliveryLocation, showPopup: true)
                                 };
         }
-        else if (order.Status == PizzaOrderStatus.OutForDelivery && DateTime.Now < dispatchTime + DeliveryDuration)// (DateTime.Now < dispatchTime + DeliveryDuration && order.Status != PizzaOrderStatus.Delivered)
+        else if (order.Status == PizzaOrderStatus.OutForDelivery && DateTime.Now < dispatchTime + DeliveryDuration)
         {
             statusText = PizzaOrderStatus.OutForDelivery;
+            isDelivered = false;
 
             var startPosition = ComputeStartPosition(order);
             var proportionOfDeliveryCompleted = Math.Min(1, (DateTime.Now - dispatchTime).TotalMilliseconds / DeliveryDuration.TotalMilliseconds);
@@ -55,6 +58,7 @@ public class OrderWithStatus
                                 {
                                         ToMapMarker("Delivery location", order.DeliveryLocation, showPopup: true),
                                 };
+            isDelivered = true;
         }
 
         return new OrderWithStatus
@@ -62,6 +66,7 @@ public class OrderWithStatus
             Order = order,
             StatusText = statusText,
             MapMarkers = mapMarkers,
+            IsDelivered = isDelivered
         };
     }
 

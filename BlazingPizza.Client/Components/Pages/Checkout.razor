@@ -67,6 +67,7 @@
 	async Task PlaceOrder()
 	{
 		//Margherita Veggie Mushroom
+        //the order object is retrieved from OrderState which is where the order state is maintained
 		var newOrderId = await Repository.PlaceOrder(OrderState.Order);
 		OrderState.ResetOrder();
 		NavigationManager.NavigateTo($"myorders/{newOrderId}");

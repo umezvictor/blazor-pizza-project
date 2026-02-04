@@ -8,6 +8,7 @@
 @rendermode InteractiveServer
 @inject IRepository Repository
 
+
 <div class="main">
 	@if (invalidOrder)
 	{
@@ -91,8 +92,11 @@
 				await InvokeAsync(StateHasChanged);
 
 				if (orderWithStatus.IsDelivered)
-				{
+				{					
 					pollingCancellationToken.Cancel();
+					await Repository.UpdateOrderStatusAsync(new UpdateOrderStatusDto { OrderId = OrderId, Status = PizzaOrderStatus.Delivered });
+					await InvokeAsync(StateHasChanged);
+					
 				}
 				else
 				{

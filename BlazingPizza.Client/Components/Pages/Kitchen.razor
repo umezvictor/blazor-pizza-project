@@ -23,7 +23,6 @@
 			<table class="table">
 				<thead>
 					<tr>
-						<th>IsDelivered</th>
 						<th>StatusText</th>
 						<th>Action</th>
 					</tr>
@@ -32,7 +31,6 @@
 					@foreach (var order in OrdersWithStatus)
 					{
 						<tr>
-							<td>@order.IsDelivered</td>
 							<td>@order.Order.Status</td>
 							<td>
 								<button type="button" class="btn btn-info" @onclick="() => LoadPizzaDetails(order.Order.Pizzas)" style="font-weight: bold">View Pizza details</button>
@@ -99,6 +97,7 @@
 	private bool _initialLoadDone = false;
 
 	//Never call JS interop in OnInitialized or OnInitializedAsync. Use OnAfterRenderAsync with the firstRender flag for such logic. 
+    //get vegetarian orders from local storage if any exists
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
@@ -138,7 +137,7 @@
 		Pizzas = pizzas;
 		// ensure UI updated before showing modal
 		await InvokeAsync(StateHasChanged);
-		// show Bootstrap modal programmatically (Bootstrap 5)
+		// show Bootstrap modal programmatically
 		await JSRuntime.InvokeVoidAsync("eval", "bootstrap.Modal.getOrCreateInstance(document.getElementById('exampleModal')).show()");
 	}
 
@@ -196,7 +195,7 @@
 		{
 			await PizzaStore.UpdateOrderStatusAsync(new UpdateOrderStatusDto { OrderId = orderId, Status = status });
 		}
-		// 
+		
 		StateHasChanged();
 	}
 
