@@ -23,6 +23,17 @@
 	</strong>
 </p>
 
+<div class="">
+	@if (@Order.GetTotalPrice() < 15.0m)
+	{
+		<span class="badge badge-warning">Low Margin</span>
+	}
+	@if (@Order.GetTotalPrice() > 50.0m)
+	{
+		<span class="badge badge-success">High Value</span>
+	}
+</div>
+
 @code {
 	[Parameter, EditorRequired] public Order Order { get; set; } = new();
 }

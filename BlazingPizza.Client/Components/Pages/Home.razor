@@ -53,16 +53,7 @@
 		</a>
 		
 	</div>
-	<div class="order-total">
-		@if (OrderState.Order.GetTotalPrice() < 15.0m)
-		{
-			<span class="badge text-bg-danger">Low Margin</span>
-		}
-		@if (OrderState.Order.GetTotalPrice() > 50.0m)
-		{
-			<span class="badge text-bg-success">High Value</span>
-		}
-	</div>
+	
 	
 </div>
 

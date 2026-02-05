@@ -29,15 +29,8 @@
 					<select class="custom-select" @onchange="ToppingSelected">
 						<option value="-1" disabled selected>(select)</option>
 						@for (var i = 0; i < toppings.Count; i++)
-						{
-							if(toppings[i].Position == "Left Half")
-							{
-								<option value="@i">@toppings[i].Name - (£@(toppings[i].GetFormattedPrice())) - @toppings[i].Position (50% off)</option>
-							}
-							else
-							{
-								<option value="@i">@toppings[i].Name - (£@(toppings[i].GetFormattedPrice())) - @toppings[i].Position</option>
-							}
+						{						
+							<option value="@i">@toppings[i].Name - (£@(toppings[i].GetFormattedPrice())) - @toppings[i].Position</option>						
 					    }
 					</select>
 				}
@@ -49,8 +42,8 @@
 					if (topping?.Topping is not null)
 					{
 						<div class="topping">
-							@topping.Topping.Name
-							<span class="topping-price">@topping.Topping.GetFormattedPrice()</span>
+						@topping.Topping.Name
+					<span class="topping-price">@GetToppingPrice(topping)</span>
 							<button type="button" class="delete-topping" @onclick="@(() => RemoveTopping(topping.Topping))">x</button>
 						</div>
 					}
@@ -77,6 +70,9 @@
 	private const int SmallPizzaSize = 9;
 	private const int LargePizzaSize = 14;
 
+	private const string LeftHalf = "Left Half";
+	
+
 	string SizeLabelClass => Pizza.Size switch
 	{
 		<= SmallPizzaSize => "pizza-small",
@@ -90,6 +86,16 @@
 		>= LargePizzaSize => "Now that's what I'm talking about!  Why not try an American Sized JUMBO pizza?",
 		_ => "That's a medium pizza, there's more to be ordered if you'd like it"
 	};
+
+	string GetToppingPrice(PizzaTopping pizzaTopping) =>
+	pizzaTopping.Topping?.Position switch
+	{
+		LeftHalf => pizzaTopping.Topping.GetDiscountedPrice(),
+		_ => pizzaTopping.Topping!.GetFormattedPrice()
+	};
+
+
+
 
 	protected async override Task OnInitializedAsync()
 	{
