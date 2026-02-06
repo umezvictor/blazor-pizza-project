@@ -8,7 +8,7 @@
 @rendermode InteractiveServer
 @inject IRepository Repository
 
-
+<AuthorizeView Roles="User">
 <div class="main">
 	@if (invalidOrder)
 	{
@@ -43,6 +43,7 @@
 		</div>
 	}
 </div>
+</AuthorizeView>
 
 @code {
 	[Parameter] public int OrderId { get; set; }

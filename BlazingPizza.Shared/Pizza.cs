@@ -32,7 +32,7 @@ public class Pizza
     public decimal GetTotalPrice()
     {
         if (Toppings.Any(t => t.Topping is null)) throw new NullReferenceException($"{nameof(Toppings)} contained null when calculating the Total Price.");
-        return GetBasePrice() + Toppings.Sum(t => t.Topping!.Position == "Left Half" ? t.Topping!.Price * 0.5m : t.Topping!.Price);
+        return GetBasePrice() + Toppings.Sum(t => t.Topping!.Price);
     }
 
     public string GetFormattedTotalPrice()

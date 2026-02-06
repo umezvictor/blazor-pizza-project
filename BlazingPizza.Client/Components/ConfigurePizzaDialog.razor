@@ -1,4 +1,5 @@
-﻿@inject IRepository _pizzaStore
+﻿@using System.Text.Json
+@inject IRepository _pizzaStore
 
 		<div class="dialog-title">
 			<h2>@Pizza.Special?.Name</h2>
@@ -11,6 +12,26 @@
 				<span class="size-label">
 					@(Pizza.Size)" (£@(Pizza.GetFormattedTotalPrice()))
 				</span>
+			</div>
+			<h6 style="margin-left:140px; margin-top: 5px;">How do you want the extra topping?</h6>
+			<div style="display:flex; flex-direction:row; align-items:flex-start">
+
+				<InputRadioGroup TValue="string"
+						 Value="@selectedOption"
+						 ValueChanged="@OnRadioSelectionChanged"
+						 ValueExpression="@(() => selectedOption)">
+					<label>
+						<InputRadio Value="@Whole" /> Whole
+					</label>
+					
+					<label>
+						<InputRadio Value="@RightHalf" /> Right Half
+					</label>
+					<label class="me-2">
+						<InputRadio Value="@LeftHalf" /> Left Half (50% off)
+					</label>
+					
+				</InputRadioGroup>
 			</div>
 			<div>
 				<label>Extra Toppings:</label>
@@ -26,11 +47,12 @@
 				}
 				else
 				{
+					
 					<select class="custom-select" @onchange="ToppingSelected">
 						<option value="-1" disabled selected>(select)</option>
 						@for (var i = 0; i < toppings.Count; i++)
 						{						
-							<option value="@i">@toppings[i].Name - (£@(toppings[i].GetFormattedPrice())) - @toppings[i].Position</option>						
+							<option value="@i">@toppings[i].Name - (£@(toppings[i].GetFormattedPrice()))</option>						
 					    }
 					</select>
 				}
@@ -43,7 +65,7 @@
 					{
 						<div class="topping">
 						@topping.Topping.Name
-					<span class="topping-price">@GetToppingPrice(topping)</span>
+					<span class="topping-price">@topping.Topping.GetFormattedPrice()</span>
 							<button type="button" class="delete-topping" @onclick="@(() => RemoveTopping(topping.Topping))">x</button>
 						</div>
 					}
@@ -66,12 +88,17 @@
 	[Parameter, EditorRequired] public EventCallback OnConfirm { get; set; }
 
 	List<Topping> toppings = null!;
+	List<PizzaTopping>? pizzaToppings = new List<PizzaTopping>();
 
 	private const int SmallPizzaSize = 9;
 	private const int LargePizzaSize = 14;
 
 	private const string LeftHalf = "Left Half";
-	
+	private const string RightHalf = "Right Half";
+	private const string Whole = "Whole";
+
+	private string selectedOption = string.Empty;
+
 
 	string SizeLabelClass => Pizza.Size switch
 	{
@@ -88,9 +115,9 @@
 	};
 
 	string GetToppingPrice(PizzaTopping pizzaTopping) =>
-	pizzaTopping.Topping?.Position switch
+	selectedOption switch
 	{
-		LeftHalf => pizzaTopping.Topping.GetDiscountedPrice(),
+		LeftHalf => pizzaTopping.Topping!.GetDiscountedPrice(),
 		_ => pizzaTopping.Topping!.GetFormattedPrice()
 	};
 
@@ -113,14 +140,68 @@
 	void AddTopping(Topping topping)
 	{
 		if (toppings is null) return;
-		if (Pizza.Toppings.Find(pt => pt.Topping == topping) is null)
+		if (Pizza.Toppings.Find(pt => pt.Topping == topping) is null && pizzaToppings!.Find(pt => pt.Topping == topping) is null)
 		{
+
 			Pizza.Toppings.Add(new PizzaTopping() { Topping = topping });
+			pizzaToppings.Add(new PizzaTopping() { Topping = new Topping { Id = topping.Id, Name = topping.Name, Position = topping.Position, Price = topping.Price } });		
 		}
 	}
 
 	void RemoveTopping(Topping topping)
 	{
 		Pizza.Toppings.RemoveAll(pt => pt.Topping == topping);
+		pizzaToppings!.RemoveAll(pt => pt.Topping == topping);
 	}
+
+	private void OnRadioSelectionChanged(string value)
+	{
+		//if (Pizza.Toppings.Count() == 0) return;
+
+		selectedOption = value;
+        Console.WriteLine($"Selected option: {selectedOption}");
+		if (selectedOption == LeftHalf)
+		{
+			Pizza.Toppings = pizzaToppings.Select(pt =>
+			{
+				var newTopping = new PizzaTopping
+				{
+					Topping = new Topping
+					{
+						Id = pt.Topping.Id,
+						Name = pt.Topping.Name,
+						Position = pt.Topping.Position,
+						Price = pt.Topping.Price * 0.5m
+					}
+				};
+				return newTopping;
+			}).ToList();
+
+			
+		}
+		else
+		{
+			Pizza.Toppings = pizzaToppings.Select(pt =>
+			{
+				var newTopping = new PizzaTopping
+				{
+					Topping = new Topping
+					{
+						Id = pt.Topping.Id,
+						Name = pt.Topping.Name,
+						Position = pt.Topping.Position,
+						Price = pt.Topping.Price
+					}
+				};
+				return newTopping;
+			}).ToList();
+
+			
+		}
+	}
+
+	
+
+	
+
 }

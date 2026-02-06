@@ -33,6 +33,7 @@ builder.Services.AddDbContext<PizzaStoreContext>(options =>
 
 // Add Identity
 builder.Services.AddIdentityCore<PizzaStoreUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<PizzaStoreContext>()
     .AddSignInManager()
     .AddDefaultTokenProviders();

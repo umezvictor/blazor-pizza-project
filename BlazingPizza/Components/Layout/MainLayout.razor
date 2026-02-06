@@ -10,12 +10,14 @@
 		<div>Get Pizza</div>
 	</NavLink>
 
-	<AuthorizeView>
+	<AuthorizeView Roles="Manager">
 		<NavLink href="myorders" class="nav-tab">
 			<img src="img/bike.svg" />
 			<div>My Orders</div>
 		</NavLink>
+	</AuthorizeView>
 
+	<AuthorizeView Roles="Cook">	
 		<NavLink href="kitchen" class="nav-tab">
 			<img src="img/bike.svg" />
 			<div>Kitchen</div>

@@ -1,13 +1,17 @@
 ﻿@page "/kitchen"
 @using BlazingPizza.Shared
 @using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
 @rendermode InteractiveServer
 @inject IRepository PizzaStore
 @inject IJSRuntime JSRuntime
 @inject OrderState OrderState
 @inject NavigationManager NavigationManager
+@attribute [Authorize]
 
 <PageTitle>Blazing Pizza - Kitchen</PageTitle>
+
+<Microsoft.AspNetCore.Components.Authorization.AuthorizeView Roles="Cook">
 
 <div class="main">
 
@@ -86,7 +90,7 @@
 	</div>
 </div>
 
-
+</Microsoft.AspNetCore.Components.Authorization.AuthorizeView>
 @code {
 
 	[Parameter]

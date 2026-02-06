@@ -13,6 +13,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject RoleManager<IdentityRole> RoleManager
 
 <PageTitle>Register</PageTitle>
 
@@ -79,6 +80,20 @@
             return;
         }
 
+        //add new users to the "User" role by default
+        if (Input.Email.StartsWith('m'))
+        {
+            await AddUserToRole(user, "Manager");
+        }
+        else if (Input.Email.StartsWith('c'))
+        {
+            await AddUserToRole(user, "Cook");
+        }
+        else
+        {
+            await AddUserToRole(user, "User");
+        }
+
         Logger.LogInformation("User created a new account with password.");
 
         var userId = await UserManager.GetUserIdAsync(user);
@@ -99,6 +114,19 @@
 
         await SignInManager.SignInAsync(user, isPersistent: false);
         RedirectManager.RedirectTo(ReturnUrl);
+    }
+
+    private async Task AddUserToRole(PizzaStoreUser user, string role)
+    {
+        if(await RoleManager.FindByNameAsync(role) is null)
+        {
+            await RoleManager.CreateAsync(new IdentityRole(role));
+        }
+              
+        if(!await UserManager.IsInRoleAsync(user, role))
+        {
+            await UserManager.AddToRoleAsync(user, role);
+        }
     }
 
     private PizzaStoreUser CreateUser()
