@@ -1,4 +1,5 @@
 ﻿@using System.Text.Json
+@inject IJSRuntime JSRuntime
 @inject IRepository _pizzaStore
 
 		<div class="dialog-title">
@@ -13,26 +14,7 @@
 					@(Pizza.Size)" (£@(Pizza.GetFormattedTotalPrice()))
 				</span>
 			</div>
-			<h6 style="margin-left:140px; margin-top: 5px;">How do you want the extra topping?</h6>
-			<div style="display:flex; flex-direction:row; align-items:flex-start">
-
-				<InputRadioGroup TValue="string"
-						 Value="@selectedOption"
-						 ValueChanged="@OnRadioSelectionChanged"
-						 ValueExpression="@(() => selectedOption)">
-					<label>
-						<InputRadio Value="@Whole" /> Whole
-					</label>
-					
-					<label>
-						<InputRadio Value="@RightHalf" /> Right Half
-					</label>
-					<label class="me-2">
-						<InputRadio Value="@LeftHalf" /> Left Half (50% off)
-					</label>
-					
-				</InputRadioGroup>
-			</div>
+			
 			<div>
 				<label>Extra Toppings:</label>
 				@if (toppings is null)
@@ -56,6 +38,26 @@
 					    }
 					</select>
 				}
+			</div>
+			<h6 style="margin-left:140px; margin-top: 15px;">How do you want the extra topping?</h6>
+			<div style="display:flex; flex-direction:row; align-items:flex-start">
+
+				<InputRadioGroup TValue="string"
+								 Value="@selectedOption"
+								 ValueChanged="@OnRadioSelectionChanged"
+								 ValueExpression="@(() => selectedOption)">
+					<label>
+						<InputRadio Value="@Whole" /> Whole
+					</label>
+
+					<label>
+						<InputRadio Value="@RightHalf" /> Right Half
+					</label>
+					<label class="me-2">
+						<InputRadio Value="@LeftHalf" /> Left Half (50% off)
+					</label>
+
+				</InputRadioGroup>
 			</div>
 
 			<div class="toppings">
@@ -121,9 +123,6 @@
 		_ => pizzaTopping.Topping!.GetFormattedPrice()
 	};
 
-
-
-
 	protected async override Task OnInitializedAsync()
 	{
 		toppings = await _pizzaStore.GetToppings();
@@ -141,10 +140,10 @@
 	{
 		if (toppings is null) return;
 		if (Pizza.Toppings.Find(pt => pt.Topping == topping) is null && pizzaToppings!.Find(pt => pt.Topping == topping) is null)
-		{
-
+		{			
 			Pizza.Toppings.Add(new PizzaTopping() { Topping = topping });
-			pizzaToppings.Add(new PizzaTopping() { Topping = new Topping { Id = topping.Id, Name = topping.Name, Position = topping.Position, Price = topping.Price } });		
+			pizzaToppings.Add(new PizzaTopping() { Topping = new Topping { Id = topping.Id, Name = topping.Name, Position = topping.Position, Price = topping.Price } });	
+
 		}
 	}
 
@@ -154,54 +153,55 @@
 		pizzaToppings!.RemoveAll(pt => pt.Topping == topping);
 	}
 
-	private void OnRadioSelectionChanged(string value)
+	private async Task OnRadioSelectionChanged(string value)
 	{
-		//if (Pizza.Toppings.Count() == 0) return;
-
+		if (Pizza.Toppings.Count == 0 || pizzaToppings!.Count == 0)
+		{
+			await JSRuntime.InvokeVoidAsync("alert", "You must first select a topping");
+			return;
+		}
 		selectedOption = value;
         Console.WriteLine($"Selected option: {selectedOption}");
-		if (selectedOption == LeftHalf)
+		if(Pizza.Toppings.Count > 0 || pizzaToppings!.Count > 0)
 		{
-			Pizza.Toppings = pizzaToppings.Select(pt =>
-			{
-				var newTopping = new PizzaTopping
-				{
-					Topping = new Topping
-					{
-						Id = pt.Topping.Id,
-						Name = pt.Topping.Name,
-						Position = pt.Topping.Position,
-						Price = pt.Topping.Price * 0.5m
-					}
-				};
-				return newTopping;
-			}).ToList();
 
-			
-		}
-		else
-		{
-			Pizza.Toppings = pizzaToppings.Select(pt =>
+			if (selectedOption == LeftHalf)
 			{
-				var newTopping = new PizzaTopping
+				Pizza.Toppings = pizzaToppings.Select(pt =>
 				{
-					Topping = new Topping
+					var newTopping = new PizzaTopping
 					{
-						Id = pt.Topping.Id,
-						Name = pt.Topping.Name,
-						Position = pt.Topping.Position,
-						Price = pt.Topping.Price
-					}
-				};
-				return newTopping;
-			}).ToList();
+						Topping = new Topping
+						{
+							Id = pt.Topping.Id,
+							Name = pt.Topping.Name,
+							Position = pt.Topping.Position,
+							Price = pt.Topping.Price * 0.5m
+						}
+					};
+					return newTopping;
+				}).ToList();
 
-			
-		}
+			}
+			else
+			{
+				Pizza.Toppings = pizzaToppings.Select(pt =>
+				{
+					var newTopping = new PizzaTopping
+					{
+						Topping = new Topping
+						{
+							Id = pt.Topping.Id,
+							Name = pt.Topping.Name,
+							Position = pt.Topping.Position,
+							Price = pt.Topping.Price
+						}
+					};
+					return newTopping;
+				}).ToList();
+
+			}
+        }
+
 	}
-
-	
-
-	
-
 }
