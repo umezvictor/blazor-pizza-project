@@ -42,6 +42,7 @@ public class HttpRepository : IRepository
 
     public async Task<int> PlaceOrder(Order order)
     {
+        Console.WriteLine("Placing order:");
         var response = await _httpClient.PostAsJsonAsync("orders", order);
         var newOrderId = await response.Content.ReadFromJsonAsync<int>();
         return newOrderId;

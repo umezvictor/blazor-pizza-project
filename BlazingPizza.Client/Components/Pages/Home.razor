@@ -1,76 +1,119 @@
 ﻿@page "/"
-@rendermode InteractiveWebAssembly
 @inject IRepository PizzaStore
 @inject IJSRuntime JSRuntime
 @inject OrderState OrderState
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@using Microsoft.AspNetCore.Components.Authorization
+@rendermode InteractiveServer
 
 
 <PageTitle>Blazing Pizzas</PageTitle>
 
-<div class="main">
-	<ul class="pizza-cards">
-		@if (specials is not null)
-		{
-			@foreach (var special in specials)
-			{
-				<li @onclick="@(()=>OrderState.ShowConfigurePizzaDialog(special))" style="background-image: url('@special.ImageUrl')">
-					<div class="pizza-info">
-						<span class="title">@special.Name</span>
-						@special.Description
-						<span class="price">@special.GetFormattedBasePrice()</span>
-					</div>
-				</li>
-			}
-		}
-	</ul>
-</div>
 
-<div class="sidebar">
-	@if (OrderState.Order.Pizzas.Any())
-	{
-		<div class="order-contents">
-			<h2>Your order</h2>
-
-			@foreach (var configuredPizza in OrderState.Order.Pizzas)
-			{
-				<ConfiguredPizzaItem Pizza="configuredPizza" OnRemoved="@(() => RemovePizza(configuredPizza))" />
-			}
-		</div>
-	}
-	else
-	{
-		<div class="empty-cart">Choose a pizza<br>to get started</div>
-	}
-
-	<div class="order-total @(OrderState.Order.Pizzas.Any() ? "" : "hidden")">
-		Total:
-		<span class="total-price">@OrderState.Order.GetFormattedTotalPrice()</span>
-		
-		
-		<a href="checkout" class="@(OrderState.Order.Pizzas.Count == 0 ? "btn btn-warning disabled" : "btn btn-warning")">
-			Order >
-		</a>
-		
+@if(isInManagerRole)
+{
+	<div class="alert alert-info" role="alert">
+		<h4 class="alert-heading">Hi Manager</h4>
+		<p>To view orders, please <a href="/myorders" class="alert-link">Go to Orders</a></p>
+    </div>
+}
+else if (isInCookRole)
+{
+	<div class="alert alert-info" role="alert">
+		<h4 class="alert-heading">Hi Chef</h4>
+		<p>To  manage orders, please <a href="/kitchen" class="alert-link">Go to kictchen</a></p>
 	</div>
-	
-	
-</div>
+}
+else
+{
+	<div class="main">
+		@if (isInUserRole)
+		{
+			<a href="/history/@userId" class="btn btn-link font-weight-bold" style="margin-left:75px; text-decoration:underline">Your last order</a>
+		}
+		<ul class="pizza-cards">
+			@if (specials is not null)
+			{
+				@foreach (var special in specials)
+				{
+					<li @onclick="@(() => OrderState.ShowConfigurePizzaDialog(special))" style="background-image: url('@special.ImageUrl')">
+						<div class="pizza-info">
+							<span class="title">@special.Name</span>
+							@special.Description
+							<span class="price">@special.GetFormattedBasePrice()</span>
+						</div>
+					</li>
+				}
+			}
+		</ul>
+	</div>
 
-<BlazingPizza.ComponentsLibrary.TemplatedDialog Show="OrderState.ShowingConfigureDialog">
-	<ConfigurePizzaDialog Pizza="OrderState.ConfiguringPizza"
-												OnCancel="OrderState.CancelConfigurePizzaDialog"
-												OnConfirm="OrderState.ConfirmConfigurePizzaDialog" />
-</BlazingPizza.ComponentsLibrary.TemplatedDialog>
+	<div class="sidebar">
+		@if (OrderState.Order.Pizzas.Any())
+		{
+			<div class="order-contents">
+				<h2>Your order</h2>
+
+				@foreach (var configuredPizza in OrderState.Order.Pizzas)
+				{
+					<ConfiguredPizzaItem Pizza="configuredPizza" OnRemoved="@(() => RemovePizza(configuredPizza))" />
+				}
+			</div>
+		}
+		else
+		{
+			<div class="empty-cart">Choose a pizza<br>to get started</div>
+		}
+
+		<div class="order-total @(OrderState.Order.Pizzas.Any() ? "" : "hidden")">
+			Total:
+			<span class="total-price">@OrderState.Order.GetFormattedTotalPrice()</span>
+
+
+			<a href="checkout" class="@(OrderState.Order.Pizzas.Count == 0 ? "btn btn-warning disabled" : "btn btn-warning")">
+				Order >
+			</a>
+
+		</div>
+
+	</div>
+
+    <BlazingPizza.ComponentsLibrary.TemplatedDialog Show="OrderState.ShowingConfigureDialog">
+        <ConfigurePizzaDialog Pizza="OrderState.ConfiguringPizza"
+                              OnCancel="OrderState.CancelConfigurePizzaDialog"
+							  OnConfirm="() => OrderState.ConfirmConfigurePizzaDialog(OrderState.IsToppingPositionSelected)" />
+    </BlazingPizza.ComponentsLibrary.TemplatedDialog>
+}
+
 
 @code {
 	List<PizzaSpecial>? specials;
+	private string userId = string.Empty;
+	public bool isInUserRole = false;
+	public bool isInManagerRole = false;
+	public bool isInCookRole = false;
 
 	protected override async Task OnInitializedAsync()
-	{
+	{		
+
 		specials = await PizzaStore.GetSpecials();
-		OrderState.JSRuntime = JSRuntime;
+		OrderState.JSRuntime = JSRuntime;	
+
+		var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+		var user = authState.User;
+
+		isInUserRole = user.Identity?.IsAuthenticated == true && user.IsInRole("User");
+		isInManagerRole = user.Identity?.IsAuthenticated == true && user.IsInRole("Manager");
+		isInCookRole = user.Identity?.IsAuthenticated == true && user.IsInRole("Cook");
+
+		if (isInUserRole)
+		{
+			userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+		}
+		
 	}
+
 
 	async Task RemovePizza(Pizza configuredPizza)
 	{

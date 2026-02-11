@@ -1,6 +1,7 @@
 ﻿@page "/checkout"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using System.Text.Json
 @rendermode InteractiveWebAssembly
 @attribute [Authorize]
 @inject OrderState OrderState
@@ -49,13 +50,15 @@
 		_ = RequestNotificationSubscriptionAsync();
 	}
 
+	// OnAfterRenderAsync Runs after the component’s markup has been rendered to the browser.
+	//The firstRender parameter is true the first time only.
+
 	override protected async Task OnAfterRenderAsync(bool first)
 	{
 
 		if (first)
 		{
 			await OrderState.GetStateFromLocalStorage(JSRuntime);
-
 			EditContext = new EditContext(OrderState.Order.DeliveryAddress);
 			EditContext.SetFieldCssClassProvider(new BootstrapFieldClassProvider());
 
@@ -66,9 +69,8 @@
 
 	async Task PlaceOrder()
 	{
-		//Margherita Veggie Mushroom
-        //the order object is retrieved from OrderState which is where the order state is maintained
-		var newOrderId = await Repository.PlaceOrder(OrderState.Order);
+		//the order object is retrieved from OrderState which is where the order state is maintained
+		var newOrderId = await Repository.PlaceOrder(OrderState.Order); //calls OrderController
 		OrderState.ResetOrder();
 		NavigationManager.NavigateTo($"myorders/{newOrderId}");
 	}

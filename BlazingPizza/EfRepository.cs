@@ -83,6 +83,7 @@ public class EfRepository : IRepository
 
     public Task<int> PlaceOrder(Order order)
     {
+        Console.WriteLine("Placing order2:");
         throw new NotImplementedException();
     }
 

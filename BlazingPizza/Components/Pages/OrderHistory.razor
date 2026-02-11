@@ -1,4 +1,4 @@
-﻿@page "/myorders"
+﻿@page "/history/{userid}"
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Identity
@@ -6,15 +6,16 @@
 @attribute [Authorize]
 @inject UserManager<PizzaStoreUser> UserManager
 
-<PageTitle>Blazing Pizza - My Orders</PageTitle>
+<PageTitle>Blazing Pizza - History</PageTitle>
+
+<AuthorizeView Roles="User">
 
 <div class="main">
 	<TemplatedList Loader="LoadOrders" ListGroupClass="orders-list">
 		<Loading>Loading...</Loading>
 		<Empty>
 			<h2>No orders placed</h2>
-@* 			<a class="btn btn-success" href="">Order some pizza</a>
- *@		</Empty> 
+		</Empty> 
 		<Item Context="item">
 			<div class="col">
 				<h5>@item.Order.CreatedTime.ToLongDateString()</h5>
@@ -22,16 +23,7 @@
 				<strong>@item.Order.Pizzas.Count()</strong>;
 				Total price:
 				<strong>£@item.Order.GetFormattedTotalPrice()</strong>
-				<span>
-					@if (@item.Order.GetTotalPrice() < 15.0m)
-					{
-						<span class="badge badge-warning">Low Margin</span>
-					}
-					@if (@item.Order.GetTotalPrice() > 50.0m)
-					{
-						<span class="badge badge-success">High Value</span>
-					}
-				</span>
+				
 			</div>
 			<div class="col">
 				Status: <strong>@item.Order.Status</strong>
@@ -40,8 +32,11 @@
 		</Item>
 	</TemplatedList>
 </div>
+</AuthorizeView>
+
 @code {
 	IEnumerable<OrderWithStatus>? ordersWithStatus;
+	[Parameter] public string UserId { get; set; }
 
 	[CascadingParameter]
 	public HttpContext HttpContext { get; set; } = default!;
@@ -51,7 +46,7 @@
 	{
 		var ordersWithStatus = Enumerable.Empty<OrderWithStatus>();
 
-		ordersWithStatus = await Repository.GetOrdersAsync();
-		return ordersWithStatus;
+		ordersWithStatus = await Repository.GetOrdersAsync(UserId);
+		return ordersWithStatus.Take(1);
 	}
 }

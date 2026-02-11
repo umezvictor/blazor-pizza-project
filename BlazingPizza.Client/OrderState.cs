@@ -8,6 +8,7 @@ namespace BlazingPizza.Client;
 public class OrderState
 {
     public bool ShowingConfigureDialog { get; private set; }
+    public bool IsToppingPositionSelected { get; set; } = false;
 
     public Pizza? ConfiguringPizza { get; private set; }
 
@@ -37,10 +38,15 @@ public class OrderState
         ShowingConfigureDialog = false;
     }
 
-    public void ConfirmConfigurePizzaDialog()
+    public async Task ConfirmConfigurePizzaDialog(bool isPositionSelected)
     {
         if (ConfiguringPizza is not null)
         {
+            if (ConfiguringPizza.Toppings.Any() && isPositionSelected == false)
+            {
+                await ShowAlert(JSRuntime, "Please select a position for your topping");
+                return;
+            }
             Order.Pizzas.Add(ConfiguringPizza);
             ConfiguringPizza = null;
         }
@@ -78,6 +84,13 @@ public class OrderState
 
         var stateAsJson = JsonSerializer.Serialize(this, new JsonSerializerOptions { IncludeFields = true });
         await jsRuntime.InvokeVoidAsync("sessionStorage.setItem", "blazingPizza.orderState", stateAsJson);
+
+    }
+
+    public async Task ShowAlert(IJSRuntime jsRuntime, string message)
+    {
+
+        await jsRuntime.InvokeVoidAsync("alert", message);
 
     }
 

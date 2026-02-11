@@ -92,7 +92,18 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            if(Input.Email.StartsWith('m'))
+            {
+                RedirectManager.RedirectTo("/myorders");
+            }
+            else if(Input.Email.StartsWith('c'))
+            {
+                RedirectManager.RedirectTo("/kitchen");
+            }
+            else
+            {
+                RedirectManager.RedirectTo("/");
+            }
         }
         else if (result.RequiresTwoFactor)
         {

@@ -5,10 +5,14 @@
 		<img src="img/logo.svg" />
 	</a>
 
-	<NavLink href="" class="nav-tab" Match="NavLinkMatch.All">
-		<img src="img/pizza-slice.svg" />
-		<div>Get Pizza</div>
-	</NavLink>
+	
+
+	<AuthorizeView Roles="User">
+		<NavLink href="" class="nav-tab" Match="NavLinkMatch.All">
+			<img src="img/pizza-slice.svg" />
+			<div>Get Pizza</div>
+		</NavLink>
+	</AuthorizeView>
 
 	<AuthorizeView Roles="Manager">
 		<NavLink href="myorders" class="nav-tab">

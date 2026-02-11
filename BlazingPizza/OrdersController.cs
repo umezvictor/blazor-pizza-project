@@ -54,6 +54,8 @@ public class OrdersController : Controller
     [HttpPost]
     public async Task<ActionResult<int>> PlaceOrder(Order order)
     {
+        var price = order.GetFormattedTotalPrice();
+
         order.CreatedTime = DateTime.Now;
         order.DeliveryLocation = new LatLong(51.5001, -0.1239);
         order.UserId = PizzaApiExtensions.GetUserId(HttpContext);
@@ -62,20 +64,25 @@ public class OrdersController : Controller
         // Enforce existence of Pizza.SpecialId and Topping.ToppingId
         // in the database - prevent the submitter from making up
         // new specials and toppings
+        // In a real application, id should autoincrement in the database - this is just for demonstration purposes
         foreach (var pizza in order.Pizzas)
         {
-            pizza.SpecialId = pizza.Special?.Id ?? 0;
-            pizza.Special = null;
+            pizza.Special.Id = GenerateId();// pizza.SpecialId;
+            pizza.SpecialId = GenerateId();// pizza.Special?.Id ?? 0;
+            //pizza.Special = null;
 
             foreach (var topping in pizza.Toppings)
             {
-                topping.ToppingId = topping.Topping?.Id ?? 0;
-                topping.Topping = null;
+                topping.Topping.Id = GenerateId();// topping.ToppingId;
+                topping.ToppingId = GenerateId();// topping.Topping?.Id ?? 0;
+                //topping.Topping = null;
             }
         }
+        var price2 = order.GetFormattedTotalPrice();
 
-        _db.Orders.Attach(order);
+        await _db.Orders.AddAsync(order);
         await _db.SaveChangesAsync();
+
 
         // In the background, send push notifications if possible
         var subscription = await _db.NotificationSubscriptions.Where(e => e.UserId == PizzaApiExtensions.GetUserId(HttpContext)).SingleOrDefaultAsync();
@@ -121,5 +128,11 @@ public class OrdersController : Controller
         {
             Console.Error.WriteLine("Error sending push notification: " + ex.Message);
         }
+    }
+
+    public int GenerateId()
+    {
+        var random = new Random();
+        return random.Next(1000, 10000);
     }
 }

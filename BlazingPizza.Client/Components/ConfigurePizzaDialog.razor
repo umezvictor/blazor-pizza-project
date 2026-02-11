@@ -1,6 +1,7 @@
 ﻿@using System.Text.Json
 @inject IJSRuntime JSRuntime
 @inject IRepository _pizzaStore
+@inject OrderState OrderState
 
 		<div class="dialog-title">
 			<h2>@Pizza.Special?.Name</h2>
@@ -29,8 +30,8 @@
 				}
 				else
 				{
-					
-					<select class="custom-select" @onchange="ToppingSelected">
+
+			       <select class="custom-select" @onchange="ToppingSelected" disabled="@radioDisabled">
 						<option value="-1" disabled selected>(select)</option>
 						@for (var i = 0; i < toppings.Count; i++)
 						{						
@@ -39,26 +40,7 @@
 					</select>
 				}
 			</div>
-			<h6 style="margin-left:140px; margin-top: 15px;">How do you want the extra topping?</h6>
-			<div style="display:flex; flex-direction:row; align-items:flex-start">
-
-				<InputRadioGroup TValue="string"
-								 Value="@selectedOption"
-								 ValueChanged="@OnRadioSelectionChanged"
-								 ValueExpression="@(() => selectedOption)">
-					<label>
-						<InputRadio Value="@Whole" /> Whole
-					</label>
-
-					<label>
-						<InputRadio Value="@RightHalf" /> Right Half
-					</label>
-					<label class="me-2">
-						<InputRadio Value="@LeftHalf" /> Left Half (50% off)
-					</label>
-
-				</InputRadioGroup>
-			</div>
+			
 
 			<div class="toppings">
 				@foreach (var topping in Pizza.Toppings)
@@ -73,13 +55,32 @@
 					}
 				}
 			</div>
+
+	<h6 style="margin-left:140px; margin-top: 15px;">Select a position for the extra topping</h6>
+	<div style="display:flex; flex-direction:row; align-items:flex-start">
+
+		<InputRadioGroup TValue="string"
+						 Value="@selectedOption"
+						 ValueChanged="@OnRadioSelectionChanged"
+						 ValueExpression="@(() => selectedOption)">
+			<label>
+				<InputRadio Value="@Whole" @attributes="GetRadioAttributes()" /> Whole
+			</label>
+			<label>
+				<InputRadio Value="@RightHalf" @attributes="GetRadioAttributes()" /> Right Half
+			</label>
+			<label class="me-2">
+				<InputRadio Value="@LeftHalf" @attributes="GetRadioAttributes()" /> Left Half (50% off)
+			</label>
+		</InputRadioGroup>
+	</div>
 		</form>
 		<div class="dialog-buttons">
 			<button class="btn btn-secondary mr-auto" @onclick="OnCancel">Cancel</button>
 			<span class="mr-center">
 				Price: <span class="price">@(Pizza.GetFormattedTotalPrice())</span>
 			</span>
-			<button class="btn btn-success ml-auto" @onclick="OnConfirm">Order ></button>
+	<button class="btn btn-success ml-auto" @onclick="() => OnConfirm.InvokeAsync(OrderState.IsToppingPositionSelected)">Order ></button>
 		</div>
 
 
@@ -100,6 +101,7 @@
 	private const string Whole = "Whole";
 
 	private string selectedOption = string.Empty;
+	private bool radioDisabled = false;
 
 
 	string SizeLabelClass => Pizza.Size switch
@@ -116,16 +118,17 @@
 		_ => "That's a medium pizza, there's more to be ordered if you'd like it"
 	};
 
-	string GetToppingPrice(PizzaTopping pizzaTopping) =>
-	selectedOption switch
-	{
-		LeftHalf => pizzaTopping.Topping!.GetDiscountedPrice(),
-		_ => pizzaTopping.Topping!.GetFormattedPrice()
-	};
 
 	protected async override Task OnInitializedAsync()
 	{
 		toppings = await _pizzaStore.GetToppings();
+	}
+
+	private Dictionary<string, object> GetRadioAttributes()
+	{
+		return radioDisabled
+			? new Dictionary<string, object> { ["disabled"] = "disabled" }
+			: new Dictionary<string, object>();
 	}
 
 	void ToppingSelected(ChangeEventArgs e)
@@ -142,7 +145,7 @@
 		if (Pizza.Toppings.Find(pt => pt.Topping == topping) is null && pizzaToppings!.Find(pt => pt.Topping == topping) is null)
 		{			
 			Pizza.Toppings.Add(new PizzaTopping() { Topping = topping });
-			pizzaToppings.Add(new PizzaTopping() { Topping = new Topping { Id = topping.Id, Name = topping.Name, Position = topping.Position, Price = topping.Price } });	
+			pizzaToppings.Add(new PizzaTopping() { Topping = new Topping { Id = topping.Id, Name = topping.Name, Price = topping.Price } });	
 
 		}
 	}
@@ -161,7 +164,8 @@
 			return;
 		}
 		selectedOption = value;
-        Console.WriteLine($"Selected option: {selectedOption}");
+        radioDisabled = true;
+		OrderState.IsToppingPositionSelected = true;
 		if(Pizza.Toppings.Count > 0 || pizzaToppings!.Count > 0)
 		{
 
@@ -175,7 +179,6 @@
 						{
 							Id = pt.Topping.Id,
 							Name = pt.Topping.Name,
-							Position = pt.Topping.Position,
 							Price = pt.Topping.Price * 0.5m
 						}
 					};
@@ -193,7 +196,6 @@
 						{
 							Id = pt.Topping.Id,
 							Name = pt.Topping.Name,
-							Position = pt.Topping.Position,
 							Price = pt.Topping.Price
 						}
 					};
